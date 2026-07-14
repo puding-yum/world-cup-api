@@ -34,3 +34,9 @@ build/
 
 ### ENV ###
 .env
+.env.*
+!.env.example
+
+### LOG ###
+# Log Spring mencetak JDBC URL (host + region Supabase) — jangan sampai ter-commit.
+*.log

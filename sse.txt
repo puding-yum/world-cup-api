@@ -1,0 +1,15 @@
+event:connected
+data:ok
+
+event:goal.added
+data:{"type":"goal.added","matchId":1,"entityId":1}
+
+event:goal.added
+data:{"type":"goal.added","matchId":1,"entityId":2}
+
+event:card.added
+data:{"type":"card.added","matchId":1,"entityId":1}
+
+event:penalty.added
+data:{"type":"penalty.added","matchId":1,"entityId":1}
+

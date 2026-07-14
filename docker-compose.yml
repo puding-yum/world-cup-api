@@ -1,0 +1,33 @@
+services:
+  api:
+    build: .
+    image: worldcup-api
+    container_name: worldcup-api
+    restart: unless-stopped
+
+    # PENTING: bind ke 127.0.0.1 saja, bukan 0.0.0.0.
+    #
+    # Docker menulis aturan iptables SENDIRI di bawah UFW. Kalau ditulis
+    # "8080:8080", port 8080 terbuka ke seluruh internet MESKIPUN `ufw status`
+    # bilang tertutup — firewall-nya dilewati begitu saja. Dengan 127.0.0.1
+    # container hanya bisa dihubungi dari dalam VPS, dan satu-satunya pintu
+    # masuk dari luar adalah nginx (443) yang memegang SSL.
+    ports:
+      - "127.0.0.1:8080:8080"
+
+    # Semua kredensial (Supabase, Upstash, CORS) dari file ini. Jangan di-commit.
+    env_file:
+      - .env
+
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

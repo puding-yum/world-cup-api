@@ -1,0 +1,376 @@
+{
+  "info": {
+    "name": "World Cup Scoreboard API",
+    "description": "Koleksi endpoint world-cup-api (Spring Boot). Import ke Postman.\n\nVariabel `baseUrl` default http://localhost:8080. POST create otomatis menyimpan id ke variabel koleksi (teamId, playerId, matchId, matchTeamId, goalId, cardId, penaltyId) lewat test script, jadi request lain bisa langsung dipakai berurutan.\n\nBase response: {success, data, error, timestamp}. Kecuali /stream (SSE) dan /actuator/health.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080", "type": "string" },
+    { "key": "teamId", "value": "1", "type": "string" },
+    { "key": "teamId2", "value": "2", "type": "string" },
+    { "key": "playerId", "value": "1", "type": "string" },
+    { "key": "matchId", "value": "1", "type": "string" },
+    { "key": "matchTeamId", "value": "1", "type": "string" },
+    { "key": "goalId", "value": "1", "type": "string" },
+    { "key": "cardId", "value": "1", "type": "string" },
+    { "key": "penaltyId", "value": "1", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Teams",
+      "item": [
+        {
+          "name": "GET /teams",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/teams", "host": ["{{baseUrl}}"], "path": ["teams"] }
+          }
+        },
+        {
+          "name": "GET /teams/detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/teams/detail", "host": ["{{baseUrl}}"], "path": ["teams", "detail"] }
+          }
+        },
+        {
+          "name": "GET /teams/{id}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/teams/{{teamId}}", "host": ["{{baseUrl}}"], "path": ["teams", "{{teamId}}"] }
+          }
+        },
+        {
+          "name": "POST /teams",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var d = pm.response.json().data;",
+                  "if (d && d.id) { pm.collectionVariables.set('teamId', d.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Argentina\",\n  \"regionMatchCode\": \"ARG\",\n  \"regionFlagCode\": \"AR\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/teams", "host": ["{{baseUrl}}"], "path": ["teams"] }
+          }
+        },
+        {
+          "name": "PUT /teams/{id}",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Argentina\",\n  \"regionMatchCode\": \"ARG\",\n  \"regionFlagCode\": \"AR\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/teams/{{teamId}}", "host": ["{{baseUrl}}"], "path": ["teams", "{{teamId}}"] }
+          }
+        },
+        {
+          "name": "DELETE /teams/{id}",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/teams/{{teamId}}", "host": ["{{baseUrl}}"], "path": ["teams", "{{teamId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Players",
+      "item": [
+        {
+          "name": "GET /players/{id}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/players/{{playerId}}", "host": ["{{baseUrl}}"], "path": ["players", "{{playerId}}"] }
+          }
+        },
+        {
+          "name": "POST /players",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var d = pm.response.json().data;",
+                  "if (d && d.id) { pm.collectionVariables.set('playerId', d.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Lionel Messi\",\n  \"teamId\": {{teamId}},\n  \"jerseyNumber\": 10,\n  \"position\": \"Forward\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/players", "host": ["{{baseUrl}}"], "path": ["players"] }
+          }
+        },
+        {
+          "name": "PUT /players/{id}",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Lionel Messi\",\n  \"teamId\": {{teamId}},\n  \"jerseyNumber\": 10,\n  \"position\": \"Forward\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/players/{{playerId}}", "host": ["{{baseUrl}}"], "path": ["players", "{{playerId}}"] }
+          }
+        },
+        {
+          "name": "DELETE /players/{id}",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/players/{{playerId}}", "host": ["{{baseUrl}}"], "path": ["players", "{{playerId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Matches",
+      "item": [
+        {
+          "name": "GET /matches/ongoing",
+          "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/matches/ongoing", "host": ["{{baseUrl}}"], "path": ["matches", "ongoing"] } }
+        },
+        {
+          "name": "GET /matches/upcoming",
+          "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/matches/upcoming", "host": ["{{baseUrl}}"], "path": ["matches", "upcoming"] } }
+        },
+        {
+          "name": "GET /matches/ended",
+          "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/matches/ended", "host": ["{{baseUrl}}"], "path": ["matches", "ended"] } }
+        },
+        {
+          "name": "GET /matches/next",
+          "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/matches/next", "host": ["{{baseUrl}}"], "path": ["matches", "next"] } }
+        },
+        {
+          "name": "GET /matches/prev",
+          "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/matches/prev", "host": ["{{baseUrl}}"], "path": ["matches", "prev"] } }
+        },
+        {
+          "name": "GET /matches (all)",
+          "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/matches", "host": ["{{baseUrl}}"], "path": ["matches"] } }
+        },
+        {
+          "name": "GET /matches/{id}",
+          "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/matches/{{matchId}}", "host": ["{{baseUrl}}"], "path": ["matches", "{{matchId}}"] } }
+        },
+        {
+          "name": "POST /matches",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var d = pm.response.json().data;",
+                  "if (d && d.id) { pm.collectionVariables.set('matchId', d.id); }",
+                  "if (d && d.teams && d.teams.length) { pm.collectionVariables.set('matchTeamId', d.teams[0].matchTeamId); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"matchCode\": \"M64\",\n  \"bracketPosition\": \"F\",\n  \"matchDate\": \"2026-07-19T18:00:00Z\",\n  \"status\": \"upcoming\",\n  \"teamIds\": [{{teamId}}, {{teamId2}}]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/matches", "host": ["{{baseUrl}}"], "path": ["matches"] }
+          }
+        },
+        {
+          "name": "PUT /matches/{id}",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"matchCode\": \"M64\",\n  \"bracketPosition\": \"F\",\n  \"matchDate\": \"2026-07-19T18:00:00Z\",\n  \"status\": \"upcoming\",\n  \"teamIds\": [{{teamId}}, {{teamId2}}]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/matches/{{matchId}}", "host": ["{{baseUrl}}"], "path": ["matches", "{{matchId}}"] }
+          }
+        },
+        {
+          "name": "PATCH /matches/{id}/status",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"ongoing\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/matches/{{matchId}}/status", "host": ["{{baseUrl}}"], "path": ["matches", "{{matchId}}", "status"] }
+          }
+        },
+        {
+          "name": "DELETE /matches/{id}",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/matches/{{matchId}}", "host": ["{{baseUrl}}"], "path": ["matches", "{{matchId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Match Events (goals / cards / penalties)",
+      "description": "Hanya bisa saat match berstatus ongoing. matchTeamId = tim yang diuntungkan (goal) / penerima (card) / penendang (penalty).",
+      "item": [
+        {
+          "name": "POST /matches/{id}/goals",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var d = pm.response.json().data;",
+                  "if (d && d.id) { pm.collectionVariables.set('goalId', d.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "{{$guid}}", "description": "Opsional: cegah double-record" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"matchTeamId\": {{matchTeamId}},\n  \"playerId\": {{playerId}},\n  \"minute\": 23,\n  \"second\": 15\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/matches/{{matchId}}/goals", "host": ["{{baseUrl}}"], "path": ["matches", "{{matchId}}", "goals"] }
+          }
+        },
+        {
+          "name": "DELETE /matches/{id}/goals/{goalId}",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/matches/{{matchId}}/goals/{{goalId}}", "host": ["{{baseUrl}}"], "path": ["matches", "{{matchId}}", "goals", "{{goalId}}"] }
+          }
+        },
+        {
+          "name": "POST /matches/{id}/cards",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var d = pm.response.json().data;",
+                  "if (d && d.id) { pm.collectionVariables.set('cardId', d.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"matchTeamId\": {{matchTeamId}},\n  \"playerId\": {{playerId}},\n  \"cardType\": \"yellow\",\n  \"minute\": 30,\n  \"second\": 0\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/matches/{{matchId}}/cards", "host": ["{{baseUrl}}"], "path": ["matches", "{{matchId}}", "cards"] }
+          }
+        },
+        {
+          "name": "DELETE /matches/{id}/cards/{cardId}",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/matches/{{matchId}}/cards/{{cardId}}", "host": ["{{baseUrl}}"], "path": ["matches", "{{matchId}}", "cards", "{{cardId}}"] }
+          }
+        },
+        {
+          "name": "POST /matches/{id}/penalties",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var d = pm.response.json().data;",
+                  "if (d && d.id) { pm.collectionVariables.set('penaltyId', d.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"matchTeamId\": {{matchTeamId}},\n  \"playerId\": {{playerId}},\n  \"kickOrder\": 1,\n  \"scored\": true\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/matches/{{matchId}}/penalties", "host": ["{{baseUrl}}"], "path": ["matches", "{{matchId}}", "penalties"] }
+          }
+        },
+        {
+          "name": "DELETE /matches/{id}/penalties/{penaltyId}",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/matches/{{matchId}}/penalties/{{penaltyId}}", "host": ["{{baseUrl}}"], "path": ["matches", "{{matchId}}", "penalties", "{{penaltyId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bracket",
+      "item": [
+        {
+          "name": "GET /bracket",
+          "request": { "method": "GET", "header": [], "url": { "raw": "{{baseUrl}}/bracket", "host": ["{{baseUrl}}"], "path": ["bracket"] } }
+        }
+      ]
+    },
+    {
+      "name": "Stream & Health",
+      "item": [
+        {
+          "name": "GET /stream (SSE)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "text/event-stream" }],
+            "url": { "raw": "{{baseUrl}}/stream", "host": ["{{baseUrl}}"], "path": ["stream"] },
+            "description": "Server-Sent Events. Postman menampilkan event masuk secara live. Event mentah JSON: {type, matchId, entityId}."
+          }
+        },
+        {
+          "name": "GET /actuator/health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/actuator/health", "host": ["{{baseUrl}}"], "path": ["actuator", "health"] }
+          }
+        }
+      ]
+    }
+  ]
+}
