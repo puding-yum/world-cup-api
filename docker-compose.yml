@@ -19,6 +19,11 @@ services:
     env_file:
       - .env
 
+    # Batas keras di VPS 2 GB: container tidak boleh melahap seluruh RAM sampai
+    # OS + nginx ikut mati. 1200m dipasangkan dengan MaxRAMPercentage=60 di
+    # Dockerfile (heap ~720m). Sisakan ~800m + swap untuk host.
+    mem_limit: 1200m
+
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
       interval: 30s
