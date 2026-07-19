@@ -1,6 +1,7 @@
 package online.puding.worldcupscoreboard.common.config;
 
 import online.puding.worldcupscoreboard.common.cache.CacheNames;
+import online.puding.worldcupscoreboard.common.observability.LoggingRedisCacheWriter;
 import online.puding.worldcupscoreboard.match.dto.MatchDetailResponse;
 import online.puding.worldcupscoreboard.match.dto.MatchSummaryResponse;
 import online.puding.worldcupscoreboard.player.dto.PlayerDetailResponse;
@@ -13,6 +14,8 @@ import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
+import org.springframework.data.redis.cache.RedisCacheWriter;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.serializer.JacksonJsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import tools.jackson.databind.JavaType;
@@ -42,8 +45,13 @@ public class CacheConfig {
     }
 
     @Bean
-    RedisCacheManagerBuilderCustomizer cacheCustomizer(CacheTtlProperties ttl) {
+    RedisCacheManagerBuilderCustomizer cacheCustomizer(CacheTtlProperties ttl, RedisConnectionFactory connectionFactory) {
+        // Bungkus writer default (non-locking, sama seperti auto-config Boot) agar
+        // tiap tulis/evict/repopulasi ter-log tanpa mengubah perilaku coalescing.
+        RedisCacheWriter writer = new LoggingRedisCacheWriter(
+                RedisCacheWriter.nonLockingRedisCacheWriter(connectionFactory));
         return builder -> builder
+                .cacheWriter(writer)
                 .withCacheConfiguration(CacheNames.MATCHES_ONGOING, listCache(MatchSummaryResponse.class, ttl.matchesOngoing()))
                 .withCacheConfiguration(CacheNames.MATCHES_UPCOMING, listCache(MatchSummaryResponse.class, ttl.matchesUpcoming()))
                 .withCacheConfiguration(CacheNames.MATCHES_ENDED, listCache(MatchSummaryResponse.class, ttl.matchesEnded()))

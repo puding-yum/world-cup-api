@@ -33,6 +33,8 @@ public class PenaltyService {
         matchService.requireMatchTeam(matchId, request.matchTeamId());
 
         // Aturan bisnis: satu kick_order per tim tidak boleh dipakai dua kali
+        log.info("DB penaltyRepository.existsByMatchTeamIdAndKickOrder (matchTeamId={}, kickOrder={})",
+                request.matchTeamId(), request.kickOrder());
         if (penaltyRepository.existsByMatchTeamIdAndKickOrder(request.matchTeamId(), request.kickOrder())) {
             throw new DomainException(ErrorCode.PENALTY_ORDER_TAKEN,
                     "kick_order " + request.kickOrder() + " sudah dipakai untuk tim ini");
@@ -43,6 +45,7 @@ public class PenaltyService {
         penalty.setPlayerId(request.playerId());
         penalty.setKickOrder(request.kickOrder());
         penalty.setScored(Boolean.TRUE.equals(request.scored()));
+        log.info("DB penaltyRepository.save (matchId={})", matchId);
         MatchPenalty saved = penaltyRepository.save(penalty);
 
         log.info("Penalti dicatat: id={}, matchId={}, kickOrder={}, scored={}",
@@ -53,9 +56,11 @@ public class PenaltyService {
     @CacheEvict(cacheNames = CacheNames.MATCHES_DETAIL, key = "#matchId")
     @Transactional
     public void deletePenalty(Long matchId, Long penaltyId) {
+        log.info("DB penaltyRepository.findById ({})", penaltyId);
         MatchPenalty penalty = penaltyRepository.findById(penaltyId)
                 .orElseThrow(() -> new PenaltyNotFoundException(penaltyId));
         matchService.requireMatchTeam(matchId, penalty.getMatchTeamId());
+        log.info("DB penaltyRepository.delete ({})", penaltyId);
         penaltyRepository.delete(penalty);
         log.info("Penalti dihapus: id={}, matchId={}", penaltyId, matchId);
     }

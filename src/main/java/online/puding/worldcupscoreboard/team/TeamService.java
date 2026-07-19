@@ -40,6 +40,7 @@ public class TeamService {
     @Cacheable(cacheNames = CacheNames.TEAMS)
     @Transactional(readOnly = true)
     public List<TeamResponse> listTeams() {
+        log.info("DB teamRepository.findAllByOrderByNameAsc");
         return teamRepository.findAllByOrderByNameAsc().stream()
                 .map(this::toResponse)
                 .toList();
@@ -52,11 +53,13 @@ public class TeamService {
     @Cacheable(cacheNames = CacheNames.TEAMS_DETAIL)
     @Transactional(readOnly = true)
     public List<TeamDetailResponse> listTeamsDetail() {
+        log.info("DB teamRepository.findAllByOrderByNameAsc (detail)");
         List<Team> teams = teamRepository.findAllByOrderByNameAsc();
         if (teams.isEmpty()) {
             return List.of();
         }
         List<Long> teamIds = teams.stream().map(Team::getId).toList();
+        log.info("DB playerRepository.findByTeamIdInOrderByTeamIdAscJerseyNumberAsc ({} tim)", teamIds.size());
         Map<Long, List<PlayerResponse>> playersByTeam =
                 playerRepository.findByTeamIdInOrderByTeamIdAscJerseyNumberAsc(teamIds).stream()
                         .collect(Collectors.groupingBy(
@@ -70,7 +73,9 @@ public class TeamService {
     @Cacheable(cacheNames = CacheNames.TEAM_DETAIL, key = "#id")
     @Transactional(readOnly = true)
     public TeamDetailResponse getTeamDetail(Long id) {
+        log.info("DB teamRepository.findById ({})", id);
         Team team = teamRepository.findById(id).orElseThrow(() -> new TeamNotFoundException(id));
+        log.info("DB playerRepository.findByTeamIdOrderByJerseyNumberAsc ({})", id);
         List<PlayerResponse> players = playerRepository.findByTeamIdOrderByJerseyNumberAsc(id).stream()
                 .map(this::toPlayerResponse)
                 .toList();
@@ -85,6 +90,7 @@ public class TeamService {
     public TeamResponse createTeam(TeamRequest request) {
         Team team = new Team();
         apply(team, request);
+        log.info("DB teamRepository.save (create)");
         Team saved = teamRepository.save(team);
         log.info("Tim dibuat: id={}, name={}", saved.getId(), saved.getName());
         return toResponse(saved);
@@ -97,8 +103,10 @@ public class TeamService {
     })
     @Transactional
     public TeamResponse updateTeam(Long id, TeamRequest request) {
+        log.info("DB teamRepository.findById ({})", id);
         Team team = teamRepository.findById(id).orElseThrow(() -> new TeamNotFoundException(id));
         apply(team, request);
+        log.info("DB teamRepository.save (update {})", id);
         Team saved = teamRepository.save(team);
         log.info("Tim diperbarui: id={}", saved.getId());
         return toResponse(saved);
@@ -111,9 +119,11 @@ public class TeamService {
     })
     @Transactional
     public void deleteTeam(Long id) {
+        log.info("DB teamRepository.existsById ({})", id);
         if (!teamRepository.existsById(id)) {
             throw new TeamNotFoundException(id);
         }
+        log.info("DB teamRepository.deleteById ({})", id);
         teamRepository.deleteById(id);
         log.info("Tim dihapus: id={}", id);
     }

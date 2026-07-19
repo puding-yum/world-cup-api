@@ -36,7 +36,9 @@ public class PlayerService {
     @Cacheable(cacheNames = CacheNames.PLAYER_DETAIL, key = "#id")
     @Transactional(readOnly = true)
     public PlayerDetailResponse getPlayer(Long id) {
+        log.info("DB playerRepository.findById ({})", id);
         Player player = playerRepository.findById(id).orElseThrow(() -> new PlayerNotFoundException(id));
+        log.info("DB teamRepository.findById ({})", player.getTeamId());
         Team team = teamRepository.findById(player.getTeamId())
                 .orElseThrow(() -> new TeamNotFoundException(player.getTeamId()));
         return toDetail(player, team);
@@ -51,6 +53,7 @@ public class PlayerService {
         requireTeamExists(request.teamId());
         Player player = new Player();
         apply(player, request);
+        log.info("DB playerRepository.save (create)");
         Player saved = playerRepository.save(player);
         log.info("Pemain dibuat: id={}, name={}, teamId={}", saved.getId(), saved.getName(), saved.getTeamId());
         return toResponse(saved);
@@ -63,9 +66,11 @@ public class PlayerService {
     })
     @Transactional
     public PlayerResponse updatePlayer(Long id, PlayerRequest request) {
+        log.info("DB playerRepository.findById ({})", id);
         Player player = playerRepository.findById(id).orElseThrow(() -> new PlayerNotFoundException(id));
         requireTeamExists(request.teamId());
         apply(player, request);
+        log.info("DB playerRepository.save (update {})", id);
         Player saved = playerRepository.save(player);
         log.info("Pemain diperbarui: id={}", saved.getId());
         return toResponse(saved);
@@ -78,14 +83,17 @@ public class PlayerService {
     })
     @Transactional
     public void deletePlayer(Long id) {
+        log.info("DB playerRepository.existsById ({})", id);
         if (!playerRepository.existsById(id)) {
             throw new PlayerNotFoundException(id);
         }
+        log.info("DB playerRepository.deleteById ({})", id);
         playerRepository.deleteById(id);
         log.info("Pemain dihapus: id={}", id);
     }
 
     private void requireTeamExists(Long teamId) {
+        log.info("DB teamRepository.existsById ({})", teamId);
         if (!teamRepository.existsById(teamId)) {
             throw new TeamNotFoundException(teamId);
         }

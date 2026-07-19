@@ -11,6 +11,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.stream.Collectors;
 
@@ -50,6 +51,19 @@ public class GlobalExceptionHandler {
         log.warn("Malformed request body: {}", ex.getMessage());
         return build(HttpStatus.BAD_REQUEST, ErrorCode.MALFORMED_REQUEST.name(),
                 "Request body tidak bisa dibaca atau formatnya salah");
+    }
+
+    /**
+     * Path yang tidak ter-map ke handler mana pun / static resource yang tidak
+     * ada (mis. request browser ke {@code /favicon.ico}). Ini kondisi normal,
+     * bukan kegagalan server: balas 404, cukup log level debug — jangan sampai
+     * catch-all di bawah menjadikannya ERROR + 500.
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<BaseResponse<Void>> handleNoResource(NoResourceFoundException ex) {
+        log.debug("No resource for {}", ex.getResourcePath());
+        return build(HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND.name(),
+                "Resource tidak ditemukan");
     }
 
     @ExceptionHandler(Exception.class)

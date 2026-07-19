@@ -14,6 +14,7 @@ public enum ErrorCode {
     MALFORMED_REQUEST(HttpStatus.BAD_REQUEST),
 
     // 404 - resource tidak ada
+    NOT_FOUND(HttpStatus.NOT_FOUND),
     TEAM_NOT_FOUND(HttpStatus.NOT_FOUND),
     PLAYER_NOT_FOUND(HttpStatus.NOT_FOUND),
     MATCH_NOT_FOUND(HttpStatus.NOT_FOUND),

@@ -55,6 +55,7 @@ public class GoalService {
         if (idemKey != null) {
             String existingId = redisTemplate.opsForValue().get(idemKey);
             if (existingId != null) {
+                log.info("DB goalRepository.findById (idempotency {})", existingId);
                 return goalRepository.findById(Long.valueOf(existingId))
                         .map(this::toResponse)
                         .orElseGet(() -> persist(matchId, request, idemKey));
@@ -69,11 +70,13 @@ public class GoalService {
         goal.setPlayerId(request.playerId());
         goal.setMinute(request.minute());
         goal.setSecond(request.second());
+        log.info("DB goalRepository.save (matchId={})", matchId);
         MatchGoal saved = goalRepository.save(goal);
 
         if (idemKey != null) {
             redisTemplate.opsForValue().set(idemKey, String.valueOf(saved.getId()),
                     Duration.ofSeconds(idempotencyTtlSeconds));
+            log.info("REDIS set key={} (idempotency)", idemKey);
         }
         log.info("Gol dicatat: id={}, matchId={}, matchTeamId={}, playerId={}",
                 saved.getId(), matchId, saved.getMatchTeamId(), saved.getPlayerId());
@@ -87,8 +90,10 @@ public class GoalService {
     })
     @Transactional
     public void deleteGoal(Long matchId, Long goalId) {
+        log.info("DB goalRepository.findById ({})", goalId);
         MatchGoal goal = goalRepository.findById(goalId).orElseThrow(() -> new GoalNotFoundException(goalId));
         matchService.requireMatchTeam(matchId, goal.getMatchTeamId());
+        log.info("DB goalRepository.delete ({})", goalId);
         goalRepository.delete(goal);
         log.info("Gol dihapus: id={}, matchId={}", goalId, matchId);
     }

@@ -36,6 +36,7 @@ public class CardService {
         card.setCardType(request.cardType());
         card.setMinute(request.minute());
         card.setSecond(request.second());
+        log.info("DB cardRepository.save (matchId={})", matchId);
         MatchCard saved = cardRepository.save(card);
 
         log.info("Kartu dicatat: id={}, matchId={}, type={}, playerId={}",
@@ -46,8 +47,10 @@ public class CardService {
     @CacheEvict(cacheNames = CacheNames.MATCHES_DETAIL, key = "#matchId")
     @Transactional
     public void deleteCard(Long matchId, Long cardId) {
+        log.info("DB cardRepository.findById ({})", cardId);
         MatchCard card = cardRepository.findById(cardId).orElseThrow(() -> new CardNotFoundException(cardId));
         matchService.requireMatchTeam(matchId, card.getMatchTeamId());
+        log.info("DB cardRepository.delete ({})", cardId);
         cardRepository.delete(card);
         log.info("Kartu dihapus: id={}, matchId={}", cardId, matchId);
     }

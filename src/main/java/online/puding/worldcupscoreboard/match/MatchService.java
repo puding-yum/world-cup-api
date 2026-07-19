@@ -93,21 +93,28 @@ public class MatchService {
     }
 
     private List<MatchSummaryResponse> listByStatus(MatchStatus status) {
-        List<Match> matches = status == MatchStatus.ENDED
-                ? matchRepository.findByMatchStatusOrderByMatchDateDesc(status)
-                : matchRepository.findByMatchStatusOrderByMatchDateAsc(status);
+        List<Match> matches;
+        if (status == MatchStatus.ENDED) {
+            log.info("DB matchRepository.findByMatchStatusOrderByMatchDateDesc (status={})", status);
+            matches = matchRepository.findByMatchStatusOrderByMatchDateDesc(status);
+        } else {
+            log.info("DB matchRepository.findByMatchStatusOrderByMatchDateAsc (status={})", status);
+            matches = matchRepository.findByMatchStatusOrderByMatchDateAsc(status);
+        }
         return assembleSummaries(matches);
     }
 
     /** GET /matches (admin) sengaja tidak di-cache. */
     @Transactional(readOnly = true)
     public List<MatchSummaryResponse> listAll() {
+        log.info("DB matchRepository.findAllByOrderByMatchDateDesc");
         return assembleSummaries(matchRepository.findAllByOrderByMatchDateDesc());
     }
 
     @Cacheable(cacheNames = CacheNames.MATCHES_NEXT, sync = true)
     @Transactional(readOnly = true)
     public MatchSummaryResponse getNext() {
+        log.info("DB matchRepository.findFirstByMatchStatusOrderByMatchDateAsc (UPCOMING)");
         return matchRepository.findFirstByMatchStatusOrderByMatchDateAsc(MatchStatus.UPCOMING)
                 .map(match -> assembleSummaries(List.of(match)).get(0))
                 .orElse(null);
@@ -116,6 +123,7 @@ public class MatchService {
     @Cacheable(cacheNames = CacheNames.MATCHES_PREV, sync = true)
     @Transactional(readOnly = true)
     public MatchSummaryResponse getPrev() {
+        log.info("DB matchRepository.findFirstByMatchStatusOrderByMatchDateDesc (ENDED)");
         return matchRepository.findFirstByMatchStatusOrderByMatchDateDesc(MatchStatus.ENDED)
                 .map(match -> assembleSummaries(List.of(match)).get(0))
                 .orElse(null);
@@ -124,6 +132,7 @@ public class MatchService {
     @Cacheable(cacheNames = CacheNames.BRACKET)
     @Transactional(readOnly = true)
     public List<MatchSummaryResponse> getBracket() {
+        log.info("DB matchRepository.findAllByOrderByMatchDateDesc (bracket)");
         List<Match> bracketMatches = matchRepository.findAllByOrderByMatchDateDesc().stream()
                 .filter(m -> m.getBracketPosition() != null && !m.getBracketPosition().isBlank())
                 .toList();
@@ -135,20 +144,33 @@ public class MatchService {
     @Cacheable(cacheNames = CacheNames.MATCHES_DETAIL, key = "#id", sync = true)
     @Transactional(readOnly = true)
     public MatchDetailResponse getDetail(Long id) {
+        log.info("DB matchRepository.findById ({})", id);
         Match match = matchRepository.findById(id).orElseThrow(() -> new MatchNotFoundException(id));
+        log.info("DB matchTeamRepository.findByMatchIdOrderByIdAsc ({})", id);
         List<MatchTeam> matchTeams = matchTeamRepository.findByMatchIdOrderByIdAsc(id);
         List<Long> matchTeamIds = matchTeams.stream().map(MatchTeam::getId).toList();
 
         Map<Long, Team> teamsById = loadTeams(matchTeams);
+        log.info("DB goalRepository.countByMatchTeamIds (detail {})", id);
         Map<Long, Long> goalCounts = toCountMap(goalRepository.countByMatchTeamIds(orEmptyGuard(matchTeamIds)));
+        log.info("DB penaltyRepository.countScoredByMatchTeamIds (detail {})", id);
         Map<Long, Long> penaltyScored = toCountMap(penaltyRepository.countScoredByMatchTeamIds(orEmptyGuard(matchTeamIds)));
 
-        List<MatchGoal> goals = matchTeamIds.isEmpty() ? List.of()
-                : goalRepository.findByMatchTeamIdInOrderByMinuteAscSecondAsc(matchTeamIds);
-        List<MatchCard> cards = matchTeamIds.isEmpty() ? List.of()
-                : cardRepository.findByMatchTeamIdInOrderByMinuteAscSecondAsc(matchTeamIds);
-        List<MatchPenalty> penalties = matchTeamIds.isEmpty() ? List.of()
-                : penaltyRepository.findByMatchTeamIdInOrderByKickOrderAsc(matchTeamIds);
+        List<MatchGoal> goals;
+        List<MatchCard> cards;
+        List<MatchPenalty> penalties;
+        if (matchTeamIds.isEmpty()) {
+            goals = List.of();
+            cards = List.of();
+            penalties = List.of();
+        } else {
+            log.info("DB goalRepository.findByMatchTeamIdInOrderByMinuteAscSecondAsc (detail {})", id);
+            goals = goalRepository.findByMatchTeamIdInOrderByMinuteAscSecondAsc(matchTeamIds);
+            log.info("DB cardRepository.findByMatchTeamIdInOrderByMinuteAscSecondAsc (detail {})", id);
+            cards = cardRepository.findByMatchTeamIdInOrderByMinuteAscSecondAsc(matchTeamIds);
+            log.info("DB penaltyRepository.findByMatchTeamIdInOrderByKickOrderAsc (detail {})", id);
+            penalties = penaltyRepository.findByMatchTeamIdInOrderByKickOrderAsc(matchTeamIds);
+        }
         boolean hasShootout = !penalties.isEmpty();
 
         Map<Long, String> playerNames = loadPlayerNames(goals, cards, penalties);
@@ -190,6 +212,7 @@ public class MatchService {
         match.setBracketPosition(request.bracketPosition());
         match.setMatchDate(request.matchDate());
         match.setMatchStatus(parseStatus(request.status(), MatchStatus.UPCOMING));
+        log.info("DB matchRepository.save (create)");
         Match saved = matchRepository.save(match);
 
         if (request.teamIds() != null && !request.teamIds().isEmpty()) {
@@ -210,6 +233,7 @@ public class MatchService {
     })
     @Transactional
     public MatchSummaryResponse update(Long id, MatchRequest request) {
+        log.info("DB matchRepository.findById ({})", id);
         Match match = matchRepository.findById(id).orElseThrow(() -> new MatchNotFoundException(id));
         match.setMatchCode(request.matchCode());
         match.setBracketPosition(request.bracketPosition());
@@ -217,6 +241,7 @@ public class MatchService {
         if (request.status() != null) {
             match.setMatchStatus(parseStatus(request.status(), match.getMatchStatus()));
         }
+        log.info("DB matchRepository.save (update {})", id);
         matchRepository.save(match);
 
         /*
@@ -228,9 +253,11 @@ public class MatchService {
          * akan menghapus seluruh event match tanpa peringatan.
          */
         if (request.teamIds() != null) {
+            log.info("DB matchTeamRepository.findByMatchIdOrderByIdAsc (update {})", id);
             List<MatchTeam> existing = matchTeamRepository.findByMatchIdOrderByIdAsc(id);
             List<Long> currentTeamIds = existing.stream().map(MatchTeam::getTeamId).toList();
             if (!currentTeamIds.equals(request.teamIds())) {
+                log.info("DB matchTeamRepository.deleteAll (update {})", id);
                 matchTeamRepository.deleteAll(existing);
                 if (!request.teamIds().isEmpty()) {
                     saveMatchTeams(id, request.teamIds());
@@ -252,6 +279,7 @@ public class MatchService {
     })
     @Transactional
     public MatchSummaryResponse changeStatus(Long id, String statusValue) {
+        log.info("DB matchRepository.findById ({})", id);
         Match match = matchRepository.findById(id).orElseThrow(() -> new MatchNotFoundException(id));
         MatchStatus target = parseStatus(statusValue, null);
         if (target == null) {
@@ -263,6 +291,7 @@ public class MatchService {
                     "Transisi status dari " + current.value() + " ke " + target.value() + " tidak diizinkan");
         }
         match.setMatchStatus(target);
+        log.info("DB matchRepository.save (changeStatus {})", id);
         matchRepository.save(match);
         log.info("Status match berubah: id={}, {} -> {}", id, current.value(), target.value());
         return assembleSummaries(List.of(match)).get(0);
@@ -292,10 +321,12 @@ public class MatchService {
     })
     @Transactional
     public void delete(Long id) {
+        log.info("DB matchRepository.existsById ({})", id);
         if (!matchRepository.existsById(id)) {
             throw new MatchNotFoundException(id);
         }
         // FK ON DELETE CASCADE menghapus match_teams + semua event di bawahnya
+        log.info("DB matchRepository.deleteById ({})", id);
         matchRepository.deleteById(id);
         log.info("Match dihapus: id={}", id);
     }
@@ -307,12 +338,14 @@ public class MatchService {
                     "Sebuah match harus punya tepat 2 tim yang berbeda");
         }
         for (Long teamId : distinct) {
+            log.info("DB teamRepository.existsById ({})", teamId);
             if (!teamRepository.existsById(teamId)) {
                 throw new TeamNotFoundException(teamId);
             }
             MatchTeam mt = new MatchTeam();
             mt.setMatchId(matchId);
             mt.setTeamId(teamId);
+            log.info("DB matchTeamRepository.save (matchId={}, teamId={})", matchId, teamId);
             matchTeamRepository.save(mt);
         }
     }
@@ -337,15 +370,19 @@ public class MatchService {
             return List.of();
         }
         List<Long> matchIds = matches.stream().map(Match::getId).toList();
+        log.info("DB matchTeamRepository.findByMatchIdInOrderByIdAsc ({} match)", matchIds.size());
         List<MatchTeam> matchTeams = matchTeamRepository.findByMatchIdInOrderByIdAsc(matchIds);
         List<Long> matchTeamIds = matchTeams.stream().map(MatchTeam::getId).toList();
 
         Map<Long, Team> teamsById = loadTeams(matchTeams);
+        log.info("DB goalRepository.countByMatchTeamIds (summary)");
         Map<Long, Long> goalCounts = toCountMap(goalRepository.countByMatchTeamIds(orEmptyGuard(matchTeamIds)));
         // Skor adu penalti ikut dibawa di summary supaya bracket & schedule bisa
         // menampilkan "FT · 4–3 PENS" dan menentukan pemenang saat skor imbang.
         // Dua query agregat batch, bukan per-match (anti N+1).
+        log.info("DB penaltyRepository.countKicksByMatchTeamIds (summary)");
         Map<Long, Long> penaltyKicks = toCountMap(penaltyRepository.countKicksByMatchTeamIds(orEmptyGuard(matchTeamIds)));
+        log.info("DB penaltyRepository.countScoredByMatchTeamIds (summary)");
         Map<Long, Long> penaltyScored = toCountMap(penaltyRepository.countScoredByMatchTeamIds(orEmptyGuard(matchTeamIds)));
         Map<Long, List<MatchTeam>> teamsByMatch = matchTeams.stream()
                 .collect(Collectors.groupingBy(MatchTeam::getMatchId));
@@ -416,6 +453,7 @@ public class MatchService {
         if (teamIds.isEmpty()) {
             return Map.of();
         }
+        log.info("DB teamRepository.findAllById ({} tim)", teamIds.size());
         return teamRepository.findAllById(teamIds).stream()
                 .collect(Collectors.toMap(Team::getId, Function.identity()));
     }
@@ -429,6 +467,7 @@ public class MatchService {
         if (playerIds.isEmpty()) {
             return Map.of();
         }
+        log.info("DB playerRepository.findAllById ({} pemain)", playerIds.size());
         return playerRepository.findAllById(playerIds).stream()
                 .collect(Collectors.toMap(Player::getId, Player::getName));
     }
@@ -447,6 +486,7 @@ public class MatchService {
     /** Pastikan match ada dan berstatus ongoing, jika tidak lempar error yang sesuai. */
     @Transactional(readOnly = true)
     public Match requireOngoing(Long matchId) {
+        log.info("DB matchRepository.findById (requireOngoing {})", matchId);
         Match match = matchRepository.findById(matchId).orElseThrow(() -> new MatchNotFoundException(matchId));
         if (match.getMatchStatus() != MatchStatus.ONGOING) {
             throw new DomainException(ErrorCode.MATCH_NOT_ONGOING,
@@ -458,6 +498,7 @@ public class MatchService {
     /** Pastikan match_team milik match yang dimaksud (mencegah event salah match). */
     @Transactional(readOnly = true)
     public MatchTeam requireMatchTeam(Long matchId, Long matchTeamId) {
+        log.info("DB matchTeamRepository.findById (requireMatchTeam {})", matchTeamId);
         MatchTeam matchTeam = matchTeamRepository.findById(matchTeamId)
                 .orElseThrow(() -> new DomainException(ErrorCode.TEAM_NOT_IN_MATCH,
                         "match_team " + matchTeamId + " tidak ditemukan"));
@@ -471,6 +512,7 @@ public class MatchService {
     /** Ambil match_team lewat id event yang match-nya harus cocok (dipakai saat DELETE event). */
     @Transactional(readOnly = true)
     public Optional<Match> findById(Long id) {
+        log.info("DB matchRepository.findById ({})", id);
         return matchRepository.findById(id);
     }
 }
